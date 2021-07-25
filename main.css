@@ -41,14 +41,14 @@ h1 {
 }
 
 h1 .extent, h1 .back {
-  position: absolute;
+  position: fixed;
   background: var(--color1);
-  left: calc(-100vw + 50%);
-  right: calc(-100vw + 50%);
-  top: -20px;
-  bottom: -25%;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 90px;
   z-index: -1;
-  clip-path: polygon(0 0, 100% 0, 100% 25%, 50% 100%, 0 25%);
+  clip-path: polygon(0 0, 100% 0, 100% 50%, 50% 100%, 0 50%);
 }
 
 h1 .back {
