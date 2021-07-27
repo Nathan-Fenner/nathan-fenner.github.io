@@ -2,11 +2,11 @@
   box-sizing: border-box;
 }
 html {
-  --color1: #235AA7;
-  --color2: #2B8DF1;
-  --color3: #66A8BA;
-  --color4: #FFFACB;
-  --color5: #FF8C00;
+  --color1: #235aa7;
+  --color2: #2b8df1;
+  --color3: #66a8ba;
+  --color4: #fffacb;
+  --color5: #ff8c00;
 
   background: white;
   color: rgba(0, 0, 0, 0.8);
@@ -15,14 +15,12 @@ html {
   padding: 0;
 }
 
-
 body {
   max-width: 800px;
   margin: 0;
   margin-left: auto;
   margin-right: auto;
   padding: 20px;
-
 }
 
 h1 {
@@ -34,14 +32,14 @@ h1 {
   align-items: center;
   justify-content: center;
   text-align: center;
-  position: relative;
   margin-bottom: 60px;
 
   text-shadow: var(--color2) 2px 2px, var(--color2) -2px 2px;
 }
 
-h1 .extent, h1 .back {
-  position: fixed;
+h1 .extent,
+h1 .back {
+  position: absolute;
   background: var(--color1);
   left: 0;
   right: 0;
@@ -55,4 +53,38 @@ h1 .back {
   z-index: -2;
   background-color: var(--color2);
   transform: translate(0, 40px);
+}
+
+a {
+  color: var(--color5);
+}
+
+button {
+  position: relative;
+  background: var(--color2);
+  border: none;
+  padding: 15px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 4px 2px rgba(0, 0, 0, 0.25);
+  transition: 0.2s box-shadow;
+}
+button:focus:not(:active) {
+  border: 5px solid white;
+  outline: none;
+  padding: 10px;
+}
+button:active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
 }

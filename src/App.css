@@ -1,0 +1,24 @@
+.App {
+  position: relative;
+  flex-grow: 1;
+  text-align: center;
+  background-color: var(--color1);
+  border-radius: 50px;
+  color: white;
+  padding: 30px;
+  aspect-ratio: 1 / 1;
+  align-self: center;
+}
+
+#root {
+  align-self: center;
+  width: 100%;
+  max-width: 90vw;
+  max-height: calc(90vh - 250px);
+  aspect-ratio: 1 / 1;
+}
+#container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
