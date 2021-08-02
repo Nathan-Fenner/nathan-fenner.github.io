@@ -78,6 +78,74 @@ function Firework({
   );
 }
 
+function compatible(a: Tile, b: Tile): boolean {
+  if ((a >= "0" && a <= "9") || (b >= "0" && b <= "9")) {
+    return a === b;
+  }
+  return (
+    (a.length > 1 && a.includes(b)) ||
+    (b.length > 1 && b.includes(a)) ||
+    (a.toLowerCase() === b.toLowerCase() && a !== b)
+  );
+}
+
+function everyScoreMap(map: ReadonlyMap<Pos, Tile>): string {
+  type Data = {
+    randomWinChance: number;
+  };
+  const stateData = new Map<string, Data>();
+
+  const keyFor = (has: ReadonlySet<Pos>) =>
+    [...has]
+      .map(p => p.toString())
+      .sort()
+      .join(";");
+
+  stateData.set(keyFor(new Set()), {
+    randomWinChance: 1,
+  });
+
+  const search = (has: ReadonlySet<Pos>): Data => {
+    const key = keyFor(has);
+    if (stateData.has(key)) {
+      return stateData.get(key)!;
+    }
+
+    const free = [...has].filter(
+      p => p.neighbors().filter(q => !has.has(q)).length >= LIBERTIES,
+    );
+    let options = 0;
+    let totalProb = 0;
+    for (const p of free) {
+      for (const q of free) {
+        if (p === q) {
+          continue;
+        }
+        if (!compatible(map.get(p)!, map.get(q)!)) {
+          continue;
+        }
+
+        const result = search(
+          new Set([...has].filter(x => x !== p && x !== q)),
+        );
+        options += 1;
+        totalProb += result.randomWinChance;
+      }
+    }
+
+    const answer: Data = {
+      randomWinChance: options ? totalProb / options : 0,
+    };
+
+    stateData.set(keyFor(has), answer);
+
+    return answer;
+  };
+  const { randomWinChance } = search(new Set(map.keys()));
+
+  return Math.floor(randomWinChance * 100).toString();
+}
+
 function Stone({
   style,
   active,
@@ -247,17 +315,6 @@ function App() {
     return generatePuzzle();
   });
   const [stones, setStonesUnderlying] = React.useState(originalStones);
-
-  function compatible(a: Tile, b: Tile): boolean {
-    if ((a >= "0" && a <= "9") || (b >= "0" && b <= "9")) {
-      return a === b;
-    }
-    return (
-      (a.length > 1 && a.includes(b)) ||
-      (b.length > 1 && b.includes(a)) ||
-      (a.toLowerCase() === b.toLowerCase() && a !== b)
-    );
-  }
 
   const [selected, setSelected] = React.useState<Pos | null>(null);
   const [lastClick, setLastClick] = React.useState(new Pos(0, 0));
