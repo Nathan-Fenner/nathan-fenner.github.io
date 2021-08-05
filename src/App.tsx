@@ -58,6 +58,7 @@ function Firework({
       <div
         ref={refOuter}
         style={{
+          zIndex: 99999,
           pointerEvents: "none",
           position: "absolute",
           left: "50%",
@@ -72,6 +73,7 @@ function Firework({
         }}
         onTransitionEnd={() => {
           refOuter.current.style.border = `0 solid ${color}`;
+          // refOuter.current.hidden = true;
         }}
       />
     </>
@@ -182,37 +184,58 @@ function Stone({
         }}
         {...props}
       >
-        <div
-          style={{
-            width: "50%",
-            aspectRatio: "1 / 1",
-            background: "black",
-            borderRadius: 2,
+        {["a", "A"].includes(tile) && (
+          <>
+            <div
+              style={{
+                position: "absolute",
+                left: "20%",
+                top: "20%",
+                right: "20%",
+                bottom: "20%",
+                background: "black",
 
-            ...(tile === "1" ? { background: "red" } : {}),
-            ...(tile === "2"
-              ? { background: "#fcd12a", borderRadius: "50%" }
-              : {}),
-            ...(tile === "3"
-              ? {
-                  background: "var(--color2)",
-                  transform: "rotate(45deg) scale(90%)",
-                }
-              : {}),
+                clipPath:
+                  "polygon(5% 0%, 100% 0%, 100% 5%, 5% 100%, 0% 100%, 0% 5%)",
 
-            ...(tile === "a"
-              ? {
-                  clipPath: "polygon(0 0, 85% 0, 35% 100%, 0 100%)",
-                }
-              : {}),
+                transform: tile === "A" ? "rotate(180deg)" : "",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: "28%",
+                top: "28%",
+                background: tile === "A" ? "black" : "white",
+                width: "18%",
+                height: "18%",
+                aspectRatio: "1 / 1",
+                borderRadius: "50%",
+              }}
+            />
+          </>
+        )}
+        {["1", "2", "3"].includes(tile) && (
+          <div
+            style={{
+              width: "50%",
+              aspectRatio: "1 / 1",
+              background: "black",
+              borderRadius: 2,
 
-            ...(tile === "A"
-              ? {
-                  clipPath: "polygon(85% 0, 100% 0, 100% 100%, 35% 100%)",
-                }
-              : {}),
-          }}
-        />
+              ...(tile === "1" ? { background: "red" } : {}),
+              ...(tile === "2"
+                ? { background: "#fcd12a", borderRadius: "50%" }
+                : {}),
+              ...(tile === "3"
+                ? {
+                    background: "var(--color2)",
+                    transform: "rotate(45deg) scale(90%)",
+                  }
+                : {}),
+            }}
+          />
+        )}
 
         {children}
       </div>
@@ -376,7 +399,7 @@ function App() {
           style={{
             position: "absolute",
             left: "50%",
-            top: stones.size === 0 ? "50%" : "-80px",
+            top: stones.size === 0 ? "50%" : "-90px",
             transform: "translate(-50%, -50%)",
             fontSize: "200%",
             zIndex: 5,
