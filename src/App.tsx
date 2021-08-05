@@ -2,6 +2,8 @@ import React from "react";
 import "./App.css";
 import { Pos } from "./Pos";
 
+import levelsData from "./levels.json";
+
 const GRID_SIZE = 9;
 
 function inGrid(p: Pos): boolean {
@@ -343,72 +345,22 @@ type Level = {
   }[];
 };
 
-const levels: Level[] = [
-  {
-    name: "Tutorial 1",
-    help: "Click two tiles to remove both.",
-    levelData: [
-      { x: 2, y: 4, tile: "1" },
-      { x: 6, y: 4, tile: "1" },
-    ],
-  },
-  {
-    name: "Tutorial 2",
-    help: "The tiles have to match.",
-    levelData: [
-      { x: 2, y: 4, tile: "1" },
-      { x: 6, y: 4, tile: "1" },
-
-      { x: 2, y: 2, tile: "2" },
-      { x: 6, y: 2, tile: "2" },
-
-      { x: 2, y: 6, tile: "3" },
-      { x: 6, y: 6, tile: "3" },
-    ],
-  },
-  {
-    name: "Tutorial 3",
-    help: "A tile can't be picked if it has 2 or more neighboring tiles.",
-    levelData: [
-      { x: 2, y: 4, tile: "1" },
-      { x: 3, y: 4, tile: "2" },
-      { x: 5, y: 4, tile: "2" },
-      { x: 4, y: 4, tile: "3" },
-      { x: 6, y: 4, tile: "1" },
-
-      { x: 2, y: 2, tile: "2" },
-      { x: 6, y: 2, tile: "2" },
-      { x: 3, y: 2, tile: "1" },
-      { x: 5, y: 2, tile: "1" },
-      { x: 4, y: 2, tile: "3" },
-      { x: 4, y: 2, tile: "3" },
-
-      { x: 2, y: 6, tile: "3" },
-      { x: 6, y: 6, tile: "3" },
-    ],
-  },
-  {
-    name: "Tutorial 4",
-    help: "Different tiles have different matching rules.",
-    levelData: [
-      { x: 2, y: 6, tile: "a" },
-      { x: 3, y: 6, tile: "2" },
-      { x: 5, y: 6, tile: "2" },
-      { x: 4, y: 6, tile: "3" },
-      { x: 6, y: 6, tile: "A" },
-
-      { x: 2, y: 2, tile: "2" },
-      { x: 6, y: 2, tile: "2" },
-      { x: 3, y: 2, tile: "1" },
-      { x: 5, y: 2, tile: "1" },
-      { x: 4, y: 2, tile: "a" },
-      { x: 4, y: 2, tile: "A" },
-
-      { x: 2, y: 4, tile: "3" },
-      { x: 6, y: 4, tile: "a" },
-    ],
-  },
-];
+const levels: Level[] = levelsData.map(level => {
+  return {
+    name: level.name,
+    help: level.help,
+    levelData: level.levelData.split(";").map(part => {
+      if (part.length !== 3) {
+        throw new Error("invalid level data");
+      }
+      return {
+        x: parseInt(part[0], 10),
+        y: parseInt(part[1], 10),
+        tile: part[2] as Tile,
+      };
+    }),
+  };
+});
 
 function serializeGameState(gameState: GameState): Level {
   return {
@@ -417,16 +369,6 @@ function serializeGameState(gameState: GameState): Level {
     levelData: [...gameState.tiles].map(([{ x, y }, tile]) => ({ x, y, tile })),
   };
 }
-
-for (let i = 0; i < 100; i++) {
-  levels.push({
-    ...serializeGameState({ tiles: generatePuzzle(), name: `Basic ${i + 1}` }),
-  });
-}
-
-type SaveData = {
-  completed: string[];
-};
 
 type GameState = {
   readonly name: string;
@@ -452,7 +394,25 @@ function processLevelData(level: Level): GameState {
 }
 
 function App() {
-  const [completed, setCompleted] = React.useState(new Set<string>([]));
+  const [completed, setCompleted] = React.useState(() => {
+    const saved: Set<string> = new Set(
+      JSON.parse(window.localStorage.getItem("completed-levels") ?? "[]"),
+    );
+    if (!saved.has("Tutorial 4")) {
+      saved.delete("Tutorial 1");
+      saved.delete("Tutorial 2");
+      saved.delete("Tutorial 3");
+      saved.delete("Tutorial 4");
+    }
+    return saved;
+  });
+
+  React.useEffect(() => {
+    window.localStorage.setItem(
+      "completed-levels",
+      JSON.stringify([...completed]),
+    );
+  });
 
   const [mode, setMode] = React.useState<"puzzle" | "levels">("puzzle");
 
@@ -464,6 +424,12 @@ function App() {
     return { tiles: generatePuzzle(), name: "Random" };
   });
   const [stones, setStonesUnderlying] = React.useState(originalStones);
+
+  React.useEffect(() => {
+    if (stones.tiles.size === 0 && !completed.has(stones.name)) {
+      setCompleted(new Set([...completed, stones.name]));
+    }
+  });
 
   const [selected, setSelected] = React.useState<Pos | null>(null);
   const [lastClick, setLastClick] = React.useState(new Pos(0, 0));
@@ -494,9 +460,7 @@ function App() {
   }, [originalStones]);
 
   function nextGame(): void {
-    const newCompleted = new Set([...completed, stones.name]);
-    setCompleted(newCompleted);
-    const nextLevel = levels.find(level => !newCompleted.has(level.name));
+    const nextLevel = levels.find(level => !completed.has(level.name));
     if (!nextLevel) {
       startRandomGame();
     } else {
@@ -528,7 +492,6 @@ function App() {
             }}
             tabIndex={mode !== "levels" ? -1 : undefined}
             onClick={() => {
-              console.info(mode);
               setMode(mode === "puzzle" ? "levels" : "puzzle");
             }}
           >
@@ -558,7 +521,7 @@ function App() {
             }}
           >
             {levels.map(level => (
-              <React.Fragment key={level.name}>
+              <React.Fragment key={level.name + "///"}>
                 {level.name.endsWith(" 1") && (
                   <div style={{ gridColumn: 1 }}>{level.name.slice(0, -2)}</div>
                 )}
@@ -638,7 +601,6 @@ function App() {
           }}
           tabIndex={mode !== "puzzle" ? -1 : undefined}
           onClick={() => {
-            console.info(mode);
             setMode(mode === "puzzle" ? "levels" : "puzzle");
           }}
         >
