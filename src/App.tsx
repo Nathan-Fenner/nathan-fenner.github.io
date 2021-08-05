@@ -333,9 +333,135 @@ function generatePuzzle() {
   return map;
 }
 
+type Level = {
+  name: string;
+  help?: string;
+  levelData: {
+    x: number;
+    y: number;
+    tile: Tile;
+  }[];
+};
+
+const levels: Level[] = [
+  {
+    name: "Tutorial 1",
+    help: "Click two tiles to remove both.",
+    levelData: [
+      { x: 2, y: 4, tile: "1" },
+      { x: 6, y: 4, tile: "1" },
+    ],
+  },
+  {
+    name: "Tutorial 2",
+    help: "The tiles have to match.",
+    levelData: [
+      { x: 2, y: 4, tile: "1" },
+      { x: 6, y: 4, tile: "1" },
+
+      { x: 2, y: 2, tile: "2" },
+      { x: 6, y: 2, tile: "2" },
+
+      { x: 2, y: 6, tile: "3" },
+      { x: 6, y: 6, tile: "3" },
+    ],
+  },
+  {
+    name: "Tutorial 3",
+    help: "A tile can't be picked if it has 2 or more neighboring tiles.",
+    levelData: [
+      { x: 2, y: 4, tile: "1" },
+      { x: 3, y: 4, tile: "2" },
+      { x: 5, y: 4, tile: "2" },
+      { x: 4, y: 4, tile: "3" },
+      { x: 6, y: 4, tile: "1" },
+
+      { x: 2, y: 2, tile: "2" },
+      { x: 6, y: 2, tile: "2" },
+      { x: 3, y: 2, tile: "1" },
+      { x: 5, y: 2, tile: "1" },
+      { x: 4, y: 2, tile: "3" },
+      { x: 4, y: 2, tile: "3" },
+
+      { x: 2, y: 6, tile: "3" },
+      { x: 6, y: 6, tile: "3" },
+    ],
+  },
+  {
+    name: "Tutorial 4",
+    help: "Different tiles have different matching rules.",
+    levelData: [
+      { x: 2, y: 6, tile: "a" },
+      { x: 3, y: 6, tile: "2" },
+      { x: 5, y: 6, tile: "2" },
+      { x: 4, y: 6, tile: "3" },
+      { x: 6, y: 6, tile: "A" },
+
+      { x: 2, y: 2, tile: "2" },
+      { x: 6, y: 2, tile: "2" },
+      { x: 3, y: 2, tile: "1" },
+      { x: 5, y: 2, tile: "1" },
+      { x: 4, y: 2, tile: "a" },
+      { x: 4, y: 2, tile: "A" },
+
+      { x: 2, y: 4, tile: "3" },
+      { x: 6, y: 4, tile: "a" },
+    ],
+  },
+];
+
+function serializeGameState(gameState: GameState): Level {
+  return {
+    name: gameState.name,
+    help: gameState.text,
+    levelData: [...gameState.tiles].map(([{ x, y }, tile]) => ({ x, y, tile })),
+  };
+}
+
+for (let i = 0; i < 100; i++) {
+  levels.push({
+    ...serializeGameState({ tiles: generatePuzzle(), name: `Basic ${i + 1}` }),
+  });
+}
+
+type SaveData = {
+  completed: string[];
+};
+
+type GameState = {
+  readonly name: string;
+  readonly tiles: ReadonlyMap<Pos, Tile>;
+  text?: string;
+};
+type GameStateBuilder = {
+  readonly name: string;
+  tiles: Map<Pos, Tile>;
+  text?: string;
+};
+
+function processLevelData(level: Level): GameState {
+  const state: GameStateBuilder = {
+    name: level.name,
+    tiles: new Map(),
+    text: level.help,
+  };
+  for (const { x, y, tile } of level.levelData) {
+    state.tiles.set(new Pos(x, y), tile);
+  }
+  return state;
+}
+
 function App() {
+  const [completed, setCompleted] = React.useState(new Set<string>([]));
+
+  const [mode, setMode] = React.useState<"puzzle" | "levels">("puzzle");
+
   const [originalStones, setOriginalStones] = React.useState(() => {
-    return generatePuzzle();
+    const firstLevel = levels.find(level => !completed.has(level.name));
+    if (firstLevel) {
+      return processLevelData(firstLevel);
+    }
+    return { tiles: generatePuzzle(), name: "Random" };
   });
   const [stones, setStonesUnderlying] = React.useState(originalStones);
 
@@ -344,12 +470,12 @@ function App() {
 
   const [history, setHistory] = React.useState<typeof stones[]>([]);
 
-  const setStones = (newStones: Map<Pos, Tile>) => {
-    setStonesUnderlying(newStones);
+  const setStones = (newStones: ReadonlyMap<Pos, Tile>) => {
+    setStonesUnderlying({ ...stones, tiles: newStones });
     setHistory([...history, stones]);
   };
 
-  const undo = () => {
+  const undo = (): void => {
     if (history.length === 0) {
       return;
     }
@@ -358,9 +484,132 @@ function App() {
     setHistory(history.slice(0, history.length - 1));
   };
 
+  function startRandomGame(): void {
+    setOriginalStones({ name: "Random", tiles: generatePuzzle() });
+  }
+
+  React.useLayoutEffect(() => {
+    setHistory([]);
+    setStonesUnderlying(originalStones);
+  }, [originalStones]);
+
+  function nextGame(): void {
+    const newCompleted = new Set([...completed, stones.name]);
+    setCompleted(newCompleted);
+    const nextLevel = levels.find(level => !newCompleted.has(level.name));
+    if (!nextLevel) {
+      startRandomGame();
+    } else {
+      setOriginalStones(processLevelData(nextLevel));
+    }
+  }
+
   return (
-    <div className="App">
-      {history.length > 0 && stones.size > 0 && (
+    <div
+      className="App"
+      style={{
+        transform: `rotateY(${
+          mode === "puzzle" ? 0 : -180
+        }deg) translateZ(50px)`,
+        transition: "transform 0.5s",
+        transformStyle: "preserve-3d",
+      }}
+    >
+      <div className="app-background" />
+      <div className="levels-background">
+        {
+          <button
+            style={{
+              position: "absolute",
+              right: 30,
+              top: 0,
+              zIndex: 5,
+              transform: "translate(0, -50%)",
+            }}
+            tabIndex={mode !== "levels" ? -1 : undefined}
+            onClick={() => {
+              console.info(mode);
+              setMode(mode === "puzzle" ? "levels" : "puzzle");
+            }}
+          >
+            ⇩ back to {stones.name}
+          </button>
+        }
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+            overflow: "scroll",
+            padding: 20,
+            borderRadius: 30,
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              padding: 40,
+              gridTemplateColumns: "repeat(auto-fit, minmax(60px, 1fr))",
+              rowGap: "10px",
+              columnGap: "10px",
+              overflow: "scroll",
+            }}
+          >
+            {levels.map(level => (
+              <React.Fragment key={level.name}>
+                {level.name.endsWith(" 1") && (
+                  <div style={{ gridColumn: 1 }}>{level.name.slice(0, -2)}</div>
+                )}
+                <button
+                  tabIndex={mode !== "levels" ? -1 : undefined}
+                  style={{
+                    fontSize: 35,
+                    background: completed.has(level.name)
+                      ? "var(--color5)"
+                      : "var(--color1)",
+                    aspectRatio: "1 / 1",
+                    borderRadius: "10px",
+                    display: "flex",
+                    placeContent: "center",
+                    placeItems: "center",
+
+                    ...(level.name.endsWith(" 1") ? { gridColumn: "1" } : {}),
+                  }}
+                  onClick={() => {
+                    setOriginalStones(processLevelData(level));
+                    setMode("puzzle");
+                  }}
+                >
+                  {level.name.replace(/[^\d]/g, "")}
+                </button>
+              </React.Fragment>
+            ))}
+            <div style={{ gridColumn: 1 }}>Random</div>
+            <button
+              tabIndex={mode !== "levels" ? -1 : undefined}
+              style={{
+                fontSize: 35,
+                background: "var(--color5)",
+                aspectRatio: "1 / 1",
+                borderRadius: "10px",
+                display: "flex",
+                placeContent: "center",
+                placeItems: "center",
+                gridColumn: 1,
+              }}
+              onClick={() => {
+                setOriginalStones({ name: "Random", tiles: generatePuzzle() });
+                setMode("puzzle");
+              }}
+            >
+              ∞
+            </button>
+          </div>
+        </div>
+      </div>
+      {history.length > 0 && stones.tiles.size > 0 && (
         <button
           style={{
             position: "absolute",
@@ -369,11 +618,31 @@ function App() {
             zIndex: 5,
             transform: "translate(0, 50%)",
           }}
+          tabIndex={mode !== "puzzle" ? -1 : undefined}
           onClick={() => {
             undo();
           }}
         >
           ↩ Undo
+        </button>
+      )}
+      {completed.has("Tutorial 4") && (
+        <button
+          style={{
+            position: "absolute",
+            right: 30,
+            top: 0,
+            zIndex: 5,
+            transform: `translate(0, -50%)`,
+            backfaceVisibility: "hidden",
+          }}
+          tabIndex={mode !== "puzzle" ? -1 : undefined}
+          onClick={() => {
+            console.info(mode);
+            setMode(mode === "puzzle" ? "levels" : "puzzle");
+          }}
+        >
+          ⇪ {stones.name}
         </button>
       )}
       <div
@@ -388,26 +657,23 @@ function App() {
       >
         <button
           onClick={() => {
-            if (stones.size !== 0) {
+            if (stones.tiles.size !== 0) {
               return;
             }
-            const novel = generatePuzzle();
-            setHistory([]);
-            setOriginalStones(novel);
-            setStonesUnderlying(novel);
+            nextGame();
           }}
           style={{
             position: "absolute",
             left: "50%",
-            top: stones.size === 0 ? "50%" : "-90px",
+            top: stones.tiles.size === 0 ? "50%" : "-90px",
             transform: "translate(-50%, -50%)",
             fontSize: "200%",
             zIndex: 5,
             transition: "top  1s",
           }}
-          tabIndex={stones.size === 0 ? 0 : -1}
+          tabIndex={stones.tiles.size === 0 ? 0 : -1}
         >
-          Play Again
+          Next
         </button>
       </div>
 
@@ -419,7 +685,8 @@ function App() {
           height: "100%",
         }}
       >
-        {stones.size === 0 && (
+        {stones.text && <div>{stones.text}</div>}
+        {stones.tiles.size === 0 && (
           <>
             {new Array(GRID_SIZE).fill(null).flatMap((_, x) =>
               new Array(GRID_SIZE).fill(null).map((_, y) => (
@@ -436,18 +703,20 @@ function App() {
             )}
           </>
         )}
-        {[...originalStones].map(([p, tile]) => (
+        {[...originalStones.tiles].map(([p, tile]) => (
           <GridSlot key={p.toString()} pos={p}>
             <Stone
-              hidden={!stones.has(p)}
+              hidden={!stones.tiles.has(p)}
               tile={tile}
               active={
-                p.neighbors().filter(n => !stones.has(n)).length >= LIBERTIES
+                p.neighbors().filter(n => !stones.tiles.has(n)).length >=
+                LIBERTIES
               }
               onClick={() => {
                 setLastClick(p);
                 if (
-                  p.neighbors().filter(n => !stones.has(n)).length < LIBERTIES
+                  p.neighbors().filter(n => !stones.tiles.has(n)).length <
+                  LIBERTIES
                 ) {
                   setSelected(null);
                   return;
@@ -461,12 +730,14 @@ function App() {
                   return;
                 }
                 if (
-                  stones.has(selected) &&
-                  compatible(stones.get(selected)!, tile)
+                  stones.tiles.has(selected) &&
+                  compatible(stones.tiles.get(selected)!, tile)
                 ) {
                   setStones(
                     new Map(
-                      [...stones].filter(q => q[0] !== selected && q[0] !== p),
+                      [...stones.tiles].filter(
+                        q => q[0] !== selected && q[0] !== p,
+                      ),
                     ),
                   );
                   setSelected(null);

@@ -2,12 +2,28 @@
   position: relative;
   flex-grow: 1;
   text-align: center;
-  background-color: var(--color1);
   border-radius: 50px;
   color: white;
   padding: 30px;
   aspect-ratio: 1 / 1;
   align-self: center;
+}
+.app-background,
+.levels-background {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color1);
+  border-radius: 50px;
+  transform: translateZ(-50px);
+  backface-visibility: hidden;
+}
+.levels-background {
+  padding: 50px;
+  transform: translateZ(-50px) rotateY(180deg);
+  background-color: var(--color3);
 }
 
 #root {
